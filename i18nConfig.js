@@ -1,4 +1,4 @@
-/*
+
 const i18nConfig = {
   defaultLocale: "en",
   locales: [
@@ -24,4 +24,4 @@ const i18nConfig = {
 }
 
 module.exports = i18nConfig
-*/
+
