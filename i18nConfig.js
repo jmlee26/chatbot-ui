@@ -12,6 +12,7 @@ const i18nConfig = {
     "id",
     "it",
     "ja",
+    "ko",
     "pt",
     "ru",
     "si",
