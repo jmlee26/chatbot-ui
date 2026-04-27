@@ -1,3 +1,4 @@
+
 const i18nConfig = {
   defaultLocale: "en",
   locales: [
@@ -11,7 +12,6 @@ const i18nConfig = {
     "id",
     "it",
     "ja",
-    "ko",
     "pt",
     "ru",
     "si",
