@@ -20,7 +20,8 @@ const i18nConfig = {
     "te",
     "vi",
     "zh"
-  ]
+  ],
+  localeDetection: true
 }
 
 module.exports = i18nConfig
