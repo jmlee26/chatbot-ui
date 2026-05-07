@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     // --- [수정 구간 시작] ---
     
     // 1. 모델 ID 정규화: UI에서 넘어온 이름을 API용 표준 ID로 변환합니다.
-    let modelId = chatSettings.model;
+    let modelId: any = chatSettings.model;
 
     if (modelId.includes("1.5-flash")) {
       modelId = "gemini-1.5-flash";
