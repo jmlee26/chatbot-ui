@@ -79,23 +79,28 @@ export async function POST(request: Request) {
 
   try {
     const profile = await getServerProfile()
-
-    // API 키 확인
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    // [핵심 수정] SDK를 사용하지 않고 직접 v1 주소로 fetch를 보냅니다.
-    // 이렇게 하면 v1beta 404 에러를 강제로 피할 수 있습니다.
     const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}:streamGenerateContent?key=${apiKey}`
 
-    // Google API 규격에 맞게 메시지 형식 변환
+    // [보정] 구글이 요구하는 엄격한 데이터 형식으로 변환
     const googlePayload = {
-      contents: messages.map(msg => ({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: msg.parts
-      })),
+      contents: messages.map(msg => {
+        // role 변환: assistant -> model, 나머지는 user
+        const role = msg.role === "assistant" ? "model" : "user"
+        
+        // parts 구성: content가 문자열인지 객체인지 확인하여 처리
+        const text = typeof msg.content === "string" ? msg.content : msg.parts?.[0]?.text || ""
+        
+        return {
+          role: role,
+          parts: [{ text: text }]
+        }
+      }),
       generationConfig: {
-        temperature: chatSettings.temperature
+        temperature: chatSettings.temperature || 0.7,
+        maxOutputTokens: 2048 // 안전을 위해 추가
       }
     }
 
@@ -107,26 +112,20 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorJson = await response.json()
-      throw new Error(errorJson.error?.message || "Google API 호출 실패")
+      // 구글이 보내준 구체적인 에러 사유를 출력하도록 수정
+      const detail = errorJson.error?.message || JSON.stringify(errorJson)
+      throw new Error(`Google API 호출 실패: ${detail}`)
     }
 
-    // 스트리밍 응답 처리
     return new Response(response.body, {
-      headers: { "Content-Type": "text/event-stream" }
+      headers: { "Content-Type": "text/plain" }
     })
 
   } catch (error: any) {
-    let errorMessage = error.message || "An unexpected error occurred"
-    const errorCode = error.status || 500
-
-    if (errorMessage.toLowerCase().includes("api key not found")) {
-      errorMessage = "Google Gemini API Key not found. Please set it in your profile settings."
-    } else if (errorMessage.toLowerCase().includes("api key not valid")) {
-      errorMessage = "Google Gemini API Key is incorrect. Please fix it in your profile settings."
-    }
-
-    return new Response(JSON.stringify({ message: errorMessage }), {
-      status: errorCode
+    console.error("Gemini Error:", error.message)
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
     })
   }
 }
