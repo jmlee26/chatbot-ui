@@ -74,7 +74,7 @@ import { LLM } from "@/types"
 
 const GROQ_PLATORM_LINK = "https://groq.com/"
 
-// LLaMA 3.1 8B (대체 모델 - 작동 확인됨)
+// 1. LLaMA 3.1 8B (단종된 모델의 공식 대체품)
 const LLaMA3_1_8B: LLM = {
   modelId: "llama-3.1-8b-instant",
   modelName: "LLaMA 3.1 8B",
@@ -90,7 +90,7 @@ const LLaMA3_1_8B: LLM = {
   }
 }
 
-// LLaMA 3.3 70B (최신 고성능 모델)
+// 2. LLaMA 3.3 70B (기존 70B의 최신 버전)
 const LLaMA3_3_70B: LLM = {
   modelId: "llama-3.3-70b-versatile",
   modelName: "LLaMA 3.3 70B",
@@ -106,6 +106,7 @@ const LLaMA3_3_70B: LLM = {
   }
 }
 
+// 3. Mixtral (기존 모델 유지)
 const MIXTRAL_8X7B: LLM = {
   modelId: "mixtral-8x7b-32768",
   modelName: "Mixtral-8x7b-Instruct-v0.1",
@@ -121,25 +122,8 @@ const MIXTRAL_8X7B: LLM = {
   }
 }
 
-// Gemma 2 9B (최신 Google 모델)
-const GEMMA2_9B_IT: LLM = {
-  modelId: "gemma2-9b-it",
-  modelName: "Gemma 2 9B",
-  provider: "groq",
-  hostedId: "gemma2-9b-it",
-  platformLink: GROQ_PLATORM_LINK,
-  imageInput: false,
-  pricing: {
-    currency: "USD",
-    unit: "1M tokens",
-    inputCost: 0.20,
-    outputCost: 0.20
-  }
-}
-
 export const GROQ_LLM_LIST: LLM[] = [
   LLaMA3_1_8B,
   LLaMA3_3_70B,
-  MIXTRAL_8X7B,
-  GEMMA2_9B_IT
+  MIXTRAL_8X7B
 ]
