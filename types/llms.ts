@@ -44,10 +44,6 @@ export type GroqLLMID =
   | "llama3-70b-8192" // LLaMA3-70b
   | "mixtral-8x7b-32768" // Mixtral-8x7b
   | "gemma-7b-it" // Gemma-7b IT
-  | "llama-3.1-8b-instant"     // 새로 추가
-  | "llama-3.3-70b-versatile"   // 새로 추가
-  | "gemma2-9b-it"             // 새로 추가 (Gemma 업데이트 대비)
-
 
 // Perplexity Models (UPDATED 1/31/24)
 export type PerplexityLLMID =
