@@ -15,10 +15,18 @@ export async function POST(request: Request) {
     const profile = await getServerProfile()
 
     checkApiKey(profile.google_gemini_api_key, "Google")
-
+    /*
     const genAI = new GoogleGenerativeAI(profile.google_gemini_api_key || "")
     const googleModel = genAI.getGenerativeModel({ model: chatSettings.model })
+    */
+    const genAI = new GoogleGenerativeAI(profile.google_gemini_api_key || "")
 
+    // 두 번째 인자에 { apiVersion: "v1" }을 추가하여 경로를 v1beta에서 v1으로 바꿉니다.
+    const googleModel = genAI.getGenerativeModel(
+      { model: chatSettings.model },
+      { apiVersion: "v1" }
+    );
+    
     const lastMessage = messages.pop()
 
     const chat = googleModel.startChat({
