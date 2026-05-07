@@ -125,6 +125,27 @@ export const CHAT_SETTING_LIMITS: Record<LLMID, ChatSettingLimits> = {
     MAX_CONTEXT_LENGTH: 8192
   },
 
+  // GROQ MODELS
+  "llama-3.1-8b-instant": {
+    MIN_TEMPERATURE: 0.0,
+    MAX_TEMPERATURE: 1.0,
+    MAX_TOKEN_OUTPUT_LENGTH: 4096,
+    MAX_CONTEXT_LENGTH: 128000
+  },
+  "llama-3.3-70b-versatile": {
+    MIN_TEMPERATURE: 0.0,
+    MAX_TEMPERATURE: 1.0,
+    MAX_TOKEN_OUTPUT_LENGTH: 4096,
+    MAX_CONTEXT_LENGTH: 128000
+  },
+  "gemma2-9b-it": {
+    MIN_TEMPERATURE: 0.0,
+    MAX_TEMPERATURE: 1.0,
+    MAX_TOKEN_OUTPUT_LENGTH: 4096,
+    MAX_CONTEXT_LENGTH: 8192
+  },
+  
+
   // OPENAI MODELS
   "gpt-3.5-turbo": {
     MIN_TEMPERATURE: 0.0,
