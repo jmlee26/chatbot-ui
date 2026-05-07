@@ -82,18 +82,30 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    //const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}:streamGenerateContent?key=${apiKey}`
-
-    // 2. 수정 코드 (-latest를 추가합니다)
-    const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}-latest:streamGenerateContent?key=${apiKey}`
+    // --- [수정 구간 시작] ---
     
-    // [보정] 구글이 요구하는 엄격한 데이터 형식으로 변환
+    // 1. 모델 ID 정규화: UI에서 넘어온 이름을 API용 표준 ID로 변환합니다.
+    let modelId = chatSettings.model;
+
+    if (modelId.includes("1.5-flash")) {
+      modelId = "gemini-1.5-flash";
+    } else if (modelId.includes("1.5-pro")) {
+      modelId = "gemini-1.5-pro";
+    } else if (modelId.includes("vision")) {
+      modelId = "gemini-pro-vision";
+    } else {
+      modelId = "gemini-pro";
+    }
+
+    // 2. URL 생성: v1 대신 v1beta를 사용합니다. 
+    // v1에서 404가 나는 모델들도 v1beta에서는 대부분 정상 작동합니다.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
+
+    // --- [수정 구간 끝] ---
+
     const googlePayload = {
       contents: messages.map(msg => {
-        // role 변환: assistant -> model, 나머지는 user
         const role = msg.role === "assistant" ? "model" : "user"
-        
-        // parts 구성: content가 문자열인지 객체인지 확인하여 처리
         const text = typeof msg.content === "string" ? msg.content : msg.parts?.[0]?.text || ""
         
         return {
@@ -103,7 +115,7 @@ export async function POST(request: Request) {
       }),
       generationConfig: {
         temperature: chatSettings.temperature || 0.7,
-        maxOutputTokens: 2048 // 안전을 위해 추가
+        maxOutputTokens: 2048
       }
     }
 
@@ -115,7 +127,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorJson = await response.json()
-      // 구글이 보내준 구체적인 에러 사유를 출력하도록 수정
+      // 구체적인 에러 객체를 문자열로 풀어서 출력
       const detail = errorJson.error?.message || JSON.stringify(errorJson)
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
