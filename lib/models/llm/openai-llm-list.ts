@@ -1,4 +1,4 @@
-/*
+
 import { LLM } from "@/types"
 
 const OPENAI_PLATORM_LINK = "https://platform.openai.com/docs/overview"
@@ -88,63 +88,4 @@ export const OPENAI_LLM_LIST: LLM[] = [
   GPT4Vision,
   GPT4,
   GPT3_5Turbo
-]
-*/
-
-import { LLM } from "@/types"
-
-const OPENAI_PLATORM_LINK = "https://platform.openai.com/docs/overview"
-
-// GPT-5.5 (최상위 전문가용 모델)
-const GPT5_5: LLM = {
-  modelId: "gpt-5.5",
-  modelName: "GPT-5.5",
-  provider: "openai",
-  hostedId: "gpt-5.5",
-  platformLink: OPENAI_PLATORM_LINK,
-  imageInput: true,
-  pricing: {
-    currency: "USD",
-    unit: "1M tokens",
-    inputCost: 15,
-    outputCost: 45
-  }
-}
-
-// GPT-5.4 (에이전트 및 전문가용 모델)
-const GPT5_4: LLM = {
-  modelId: "gpt-5.4",
-  modelName: "GPT-5.4",
-  provider: "openai",
-  hostedId: "gpt-5.4",
-  platformLink: OPENAI_PLATORM_LINK,
-  imageInput: true,
-  pricing: {
-    currency: "USD",
-    unit: "1M tokens",
-    inputCost: 10,
-    outputCost: 30
-  }
-}
-
-// GPT-5.4-mini (고속/저비용 최적화 모델)
-const GPT5_4_Mini: LLM = {
-  modelId: "gpt-5.4-mini",
-  modelName: "GPT-5.4-mini",
-  provider: "openai",
-  hostedId: "gpt-5.4-mini",
-  platformLink: OPENAI_PLATORM_LINK,
-  imageInput: true,
-  pricing: {
-    currency: "USD",
-    unit: "1M tokens",
-    inputCost: 0.1,
-    outputCost: 0.4
-  }
-}
-
-export const OPENAI_LLM_LIST: LLM[] = [
-  GPT5_5,
-  GPT5_4,
-  GPT5_4_Mini
 ]
