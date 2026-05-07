@@ -82,8 +82,11 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}:streamGenerateContent?key=${apiKey}`
+    //const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}:streamGenerateContent?key=${apiKey}`
 
+    // 2. 수정 코드 (-latest를 추가합니다)
+    const url = `https://generativelanguage.googleapis.com/v1/models/${chatSettings.model}-latest:streamGenerateContent?key=${apiKey}`
+    
     // [보정] 구글이 요구하는 엄격한 데이터 형식으로 변환
     const googlePayload = {
       contents: messages.map(msg => {
