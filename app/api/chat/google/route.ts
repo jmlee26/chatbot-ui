@@ -82,42 +82,33 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    // 1. [최종 모델 ID] v1 정식 버전에서 인식하는 최신 명칭
-    const modelId = "gemini-3-flash-latest"; 
+    // 1. 모델 ID 결정: 환경변수가 있으면 그것을 쓰고, 없으면 기본값 사용
+    // 주의: -latest를 붙여서 404가 났다면, 순수하게 모델명만 사용해봅니다.
+    const modelId = process.env.GOOGLE_GEMINI_MODEL || "gemini-3-flash";
 
-    // 2. [최종 URL] 정식 안정 버전인 v1 사용
-    const url = `https://generativelanguage.googleapis.com/v1/models/${modelId}:streamGenerateContent?key=${apiKey}`;
+    // 2. URL 결정: 400 에러(연결 성공)가 났었던 v1beta 경로를 다시 사용합니다.
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
-    // 3. [메시지 구조 보정] 400 에러(contents missing) 방지를 위한 정밀 추출
     const googlePayload = {
-      contents: messages.map(msg => {
-        const role = msg.role === "assistant" ? "model" : "user";
-        
-        // 텍스트 추출 (문자열, parts 배열, content.parts 배열 모두 대응)
-        let text = "";
-        if (typeof msg.content === "string") {
-          text = msg.content;
-        } else if (msg.parts?.[0]?.text) {
-          text = msg.parts[0].text;
-        } else if (msg.content?.parts?.[0]?.text) {
-          text = msg.content.parts[0].text;
-        }
+      contents: messages
+        .filter(msg => msg.content && msg.content.trim() !== "")
+        .map(msg => {
+          const role = msg.role === "assistant" ? "model" : "user";
+          let text = "";
+          if (typeof msg.content === "string") text = msg.content;
+          else if (msg.parts?.[0]?.text) text = msg.parts[0].text;
+          else if (msg.content?.parts?.[0]?.text) text = msg.content.parts[0].text;
 
-        return {
-          role: role,
-          parts: [{ text: text || " " }] 
-        };
-      }).filter(item => item.parts[0].text.trim() !== ""),
+          return {
+            role: role,
+            parts: [{ text: text || " " }]
+          };
+        }),
       generationConfig: {
         temperature: chatSettings.temperature || 0.7,
         maxOutputTokens: 4096
       }
     };
-
-    // 데이터가 비었을 경우 방어 로직
-    if (googlePayload.contents.length === 0) {
-      throw new Error("전송할 메시지 내용이 없습니다.");
-    }
 
     const response = await fetch(url, {
       method: "POST",
@@ -131,7 +122,6 @@ export async function POST(request: Request) {
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
 
-    // 스트리밍 응답 반환
     return new Response(response.body, {
       headers: { "Content-Type": "text/plain" }
     })
