@@ -198,3 +198,12 @@ export async function POST(request: Request) {
         "Connection": "keep-alive"
       }
     })
+    
+  } catch (error: any) { // <--- 1. try 블록을 닫고 catch 시작
+    console.error("Gemini Error:", error.message)
+    return new Response(JSON.stringify({ message: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    })
+  } // <--- 2. POST 함수 전체를 닫는 중괄호
+}
