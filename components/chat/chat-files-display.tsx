@@ -14,8 +14,7 @@ import {
   IconLoader2,
   IconMarkdown,
   IconX,
-  IconFileTypeXls,
-  IconFileTypeHwp
+  IconFileTypeXls
 } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC, useContext, useState } from "react"
@@ -201,8 +200,6 @@ export const ChatFilesDisplay: FC<ChatFilesDisplayProps> = ({}) => {
                           return <IconFileTypeDocx />
                         case "xls":
                           return <IconFileTypeXls />
-                        case "hwp":
-                          return <IconFileTypeHwp />
                         default:
                           return <IconFileFilled />
                       }
