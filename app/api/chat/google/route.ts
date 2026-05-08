@@ -84,23 +84,24 @@ export async function POST(request: Request) {
 
     // --- [수정 구간 시작] ---
     
-    // 1. 모델 ID 정규화: UI에서 넘어온 이름을 API용 표준 ID로 변환합니다.
+    // modelId 매핑 부분을 현재 리스트에 맞게 수정
     let modelId: any = chatSettings.model;
-
-    if (modelId.includes("1.5-flash")) {
-      modelId = "gemini-1.5-flash";
-    } else if (modelId.includes("1.5-pro")) {
-      modelId = "gemini-1.5-pro";
-    } else if (modelId.includes("vision")) {
-      modelId = "gemini-pro-vision";
+    
+    // UI에서 무엇을 선택하든, 현재 사용 가능한 최신 모델로 연결합니다.
+    if (modelId.includes("flash")) {
+      // 현재 리스트에 있는 Gemini 3 Flash 또는 3.1 Flash Lite 사용
+      modelId = "gemini-3-flash"; 
+    } else if (modelId.includes("pro")) {
+      // Pro 모델 권한이 0/0이라면 실행이 안 될 수 있으니 3 Flash로 우회하거나 확인 필요
+      modelId = "gemini-2.5-flash"; 
     } else {
-      modelId = "gemini-pro";
+      // 기본값
+      modelId = "gemini-3-flash";
     }
-
-    // 2. URL 생성: v1 대신 v1beta를 사용합니다. 
-    // v1에서 404가 나는 모델들도 v1beta에서는 대부분 정상 작동합니다.
+    
+    // URL은 여전히 v1beta가 가장 안전합니다.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
-
+    
     // --- [수정 구간 끝] ---
 
     const googlePayload = {
