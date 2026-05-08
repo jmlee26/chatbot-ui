@@ -56,7 +56,7 @@ const GOOGLE_PLATORM_LINK = "https://ai.google.dev/"
 
 // Gemini 3 Flash (최신 메인 모델)
 const GEMINI_2_5_PRO: LLM = {
-  modelId: "gemini-2-5-pro",
+  modelId: "gemini-2.5-pro",
   modelName: "Gemini 2.5 pro",
   provider: "google",
   hostedId: "gemini-2.5-pro",
