@@ -82,11 +82,12 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    // 1. 모델 ID 결정: 환경변수가 있으면 그것을 쓰고, 없으면 기본값 사용
-    // 주의: -latest를 붙여서 404가 났다면, 순수하게 모델명만 사용해봅니다.
-    const modelId = process.env.GOOGLE_GEMINI_MODEL || "gemini-2.5-flash";
-
-    // 2. URL 결정: 400 에러(연결 성공)가 났었던 v1beta 경로를 다시 사용합니다.
+    // 1. 모델 ID 결정 로직을 아래와 같이 수정하세요.
+    // 환경변수가 설정되어 있다면 그것을 강제로 사용하고, 
+    // 설정되어 있지 않다면 사용자가 UI에서 클릭한(chatSettings.model) 모델을 사용합니다.
+    const modelId = process.env.GOOGLE_GEMINI_MODEL || chatSettings.model;
+    
+    // 2. URL 생성 (2.5나 3 모델은 v1beta 경로가 가장 안정적입니다)
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
     // [최종 보정] 어떤 구조에서든 텍스트를 반드시 찾아내는 로직
