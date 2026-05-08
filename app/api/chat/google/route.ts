@@ -82,41 +82,20 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    // --- [수정 구간 시작] ---
-    
-    // modelId 매핑 부분을 현재 리스트에 맞게 수정
-    let modelId: any = chatSettings.model;
-    
-    // UI에서 무엇을 선택하든, 현재 사용 가능한 최신 모델로 연결합니다.
-    if (modelId.includes("flash")) {
-      // 현재 리스트에 있는 Gemini 3 Flash 또는 3.1 Flash Lite 사용
-      modelId = "gemini-3-flash"; 
-    } else if (modelId.includes("pro")) {
-      // Pro 모델 권한이 0/0이라면 실행이 안 될 수 있으니 3 Flash로 우회하거나 확인 필요
-      modelId = "gemini-2.5-flash"; 
-    } else {
-      // 기본값
-      modelId = "gemini-3-flash";
-    }
-    
-    // URL은 여전히 v1beta가 가장 안전합니다.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
-    
-    // --- [수정 구간 끝] ---
+    // [최종 수정] 2026년 최신 모델 명칭과 Stable(v1) 경로 사용
+    const modelId = "gemini-3-flash"; 
+    const url = `https://generativelanguage.googleapis.com/v1/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
     const googlePayload = {
-      contents: messages.map(msg => {
-        const role = msg.role === "assistant" ? "model" : "user"
-        const text = typeof msg.content === "string" ? msg.content : msg.parts?.[0]?.text || ""
-        
-        return {
-          role: role,
-          parts: [{ text: text }]
-        }
-      }),
+      contents: messages
+        .filter(msg => msg.content && msg.content.trim() !== "")
+        .map(msg => ({
+          role: msg.role === "assistant" ? "model" : "user",
+          parts: [{ text: typeof msg.content === "string" ? msg.content : msg.parts?.[0]?.text || "" }]
+        })),
       generationConfig: {
         temperature: chatSettings.temperature || 0.7,
-        maxOutputTokens: 2048
+        maxOutputTokens: 4096
       }
     }
 
@@ -128,7 +107,7 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorJson = await response.json()
-      // 구체적인 에러 객체를 문자열로 풀어서 출력
+      // 에러 메시지 상세 출력 로직
       const detail = errorJson.error?.message || JSON.stringify(errorJson)
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
