@@ -73,6 +73,20 @@ export const CHAT_SETTING_LIMITS: Record<LLMID, ChatSettingLimits> = {
     MAX_CONTEXT_LENGTH: 12288
   },
 
+  // GOOGLE MODELS 섹션을 찾아 아래 내용을 추가하세요
+  "gemini-3-flash": {
+    MIN_TEMPERATURE: 0.0,
+    MAX_TEMPERATURE: 1.0,
+    MAX_TOKEN_OUTPUT_LENGTH: 4096,
+    MAX_CONTEXT_LENGTH: 128000
+  },
+  "gemini-3-1-flash-lite": {
+    MIN_TEMPERATURE: 0.0,
+    MAX_TEMPERATURE: 1.0,
+    MAX_TOKEN_OUTPUT_LENGTH: 4096,
+    MAX_CONTEXT_LENGTH: 128000
+  },
+
   // MISTRAL MODELS
   "mistral-tiny": {
     MIN_TEMPERATURE: 0.0,
