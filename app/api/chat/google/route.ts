@@ -89,26 +89,41 @@ export async function POST(request: Request) {
     // 2. URL 결정: 400 에러(연결 성공)가 났었던 v1beta 경로를 다시 사용합니다.
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
+    // [최종 보정] 어떤 구조에서든 텍스트를 반드시 찾아내는 로직
     const googlePayload = {
       contents: messages
-        .filter(msg => msg.content && msg.content.trim() !== "")
         .map(msg => {
           const role = msg.role === "assistant" ? "model" : "user";
+          
+          // 텍스트 추출을 위한 다각도 탐색
           let text = "";
-          if (typeof msg.content === "string") text = msg.content;
-          else if (msg.parts?.[0]?.text) text = msg.parts[0].text;
-          else if (msg.content?.parts?.[0]?.text) text = msg.content.parts[0].text;
+          if (typeof msg.content === "string") {
+            text = msg.content;
+          } else if (msg.parts && msg.parts[0]?.text) {
+            text = msg.parts[0].text;
+          } else if (msg.content?.parts && msg.content.parts[0]?.text) {
+            text = msg.content.parts[0].text;
+          } else if (msg.content?.text) {
+            text = msg.content.text;
+          }
 
           return {
             role: role,
-            parts: [{ text: text || " " }]
+            parts: [{ text: text.trim() || " " }] // 빈 텍스트 방지용 공백
           };
-        }),
+        })
+        .filter(item => item.parts[0].text.trim() !== ""), // 유효한 내용만 필터링
+
       generationConfig: {
         temperature: chatSettings.temperature || 0.7,
         maxOutputTokens: 4096
       }
     };
+
+    // 만약 필터링 후 내용이 하나도 없다면 에러 발생 (빈 요청 방지)
+    if (googlePayload.contents.length === 0) {
+      throw new Error("보낼 메시지 내용이 비어있습니다. 입력창에 내용을 작성해 주세요.");
+    }
 
     const response = await fetch(url, {
       method: "POST",
