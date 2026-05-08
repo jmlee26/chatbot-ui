@@ -138,7 +138,6 @@ export async function POST(request: Request) {
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
 
-    // [수정된 부분] 구글 스트림 응답을 chatbot-ui가 이해할 수 있는 텍스트 스트림으로 변환
     const encoder = new TextEncoder()
     const decoder = new TextDecoder()
 
@@ -148,32 +147,43 @@ export async function POST(request: Request) {
         if (!reader) return
 
         let buffer = ""
-
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          buffer += chunk
+          buffer += decoder.decode(value, { stream: true })
 
-          // 구글 스트림은 JSON 조각들이 [{}, {}] 형태로 옵니다.
-          // 이를 정규식으로 파싱하여 text만 추출합니다.
-          const lines = buffer.split("\n")
-          buffer = lines.pop() || ""
+          // 구글 스트리밍 응답의 각 JSON 객체 경계를 찾아 파싱합니다.
+          let startIdx = buffer.indexOf('{')
+          while (startIdx !== -1) {
+            let braceCount = 0
+            let endIdx = -1
 
-          for (const line of lines) {
-            const cleanedLine = line.trim().replace(/^,/, "").replace(/^\[/, "").replace(/\]$/, "")
-            if (!cleanedLine) continue
+            for (let i = startIdx; i < buffer.length; i++) {
+              if (buffer[i] === '{') braceCount++
+              else if (buffer[i] === '}') braceCount--
 
-            try {
-              const json = JSON.parse(cleanedLine)
-              const text = json.candidates?.[0]?.content?.parts?.[0]?.text || ""
-              if (text) {
-                controller.enqueue(encoder.encode(text))
+              if (braceCount === 0) {
+                endIdx = i
+                break
               }
-            } catch (e) {
-              // 불완전한 JSON 조각은 무시하고 다음 버퍼로 넘깁니다.
-              continue
+            }
+
+            if (endIdx !== -1) {
+              const jsonStr = buffer.substring(startIdx, endIdx + 1)
+              try {
+                const json = JSON.parse(jsonStr)
+                const text = json.candidates?.[0]?.content?.parts?.[0]?.text || ""
+                if (text) {
+                  controller.enqueue(encoder.encode(text))
+                }
+              } catch (e) {
+                console.error("파싱 에러:", e)
+              }
+              buffer = buffer.substring(endIdx + 1)
+              startIdx = buffer.indexOf('{')
+            } else {
+              break // 아직 완전한 JSON 객체가 아님
             }
           }
         }
@@ -182,14 +192,9 @@ export async function POST(request: Request) {
     })
 
     return new Response(readableStream, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" }
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive"
+      }
     })
-
-  } catch (error: any) {
-    console.error("Gemini Error:", error.message)
-    return new Response(JSON.stringify({ message: error.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    })
-  }
-}
