@@ -24,6 +24,7 @@ export type GoogleLLMID =
   | "gemini-1.5-flash" // Gemini 1.5 Flash
   | "gemini-3-flash"           // 추가
   | "gemini-3.1-flash-lite"    // 추가
+  | "gemini-2.5-flash" 
 
 // Anthropic Models
 export type AnthropicLLMID =
