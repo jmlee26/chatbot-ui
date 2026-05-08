@@ -86,17 +86,38 @@ export async function POST(request: Request) {
     const modelId = "gemini-3-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
+    // [수정된 부분] 데이터 구조를 더 직관적이고 안전하게 변경합니다.
     const googlePayload = {
-      contents: messages
-        .filter(msg => msg.content && msg.content.trim() !== "")
-        .map(msg => ({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: typeof msg.content === "string" ? msg.content : msg.parts?.[0]?.text || "" }]
-        })),
+      contents: messages.map(msg => {
+        // 1. role 결정 (assistant -> model, 나머지는 user)
+        const role = msg.role === "assistant" ? "model" : "user";
+        
+        // 2. content 추출 (chatbot-ui 버전마다 content 위치가 다를 수 있음)
+        // msg.content가 문자열이면 그대로 쓰고, 아니면 parts 내부를 확인
+        let messageText = "";
+        if (typeof msg.content === "string") {
+          messageText = msg.content;
+        } else if (Array.isArray(msg.parts) && msg.parts[0]?.text) {
+          messageText = msg.parts[0].text;
+        } else if (msg.content?.parts?.[0]?.text) {
+          messageText = msg.content.parts[0].text;
+        }
+
+        return {
+          role: role,
+          parts: [{ text: messageText || " " }] // 비어있지 않게 최소한의 공백 추가
+        };
+      }).filter(item => item.parts[0].text.trim() !== ""), // 텍스트가 있는 것만 전송
+      
       generationConfig: {
         temperature: chatSettings.temperature || 0.7,
         maxOutputTokens: 4096
       }
+    };
+
+    // 만약 contents가 비어버리면 에러가 나므로 최소한의 방어 로직 추가
+    if (googlePayload.contents.length === 0) {
+       throw new Error("보낼 메시지 내용이 비어있습니다. 입력창을 확인해 주세요.");
     }
 
     const response = await fetch(url, {
