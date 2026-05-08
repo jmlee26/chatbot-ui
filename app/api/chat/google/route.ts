@@ -82,24 +82,26 @@ export async function POST(request: Request) {
     checkApiKey(profile.google_gemini_api_key, "Google")
     const apiKey = profile.google_gemini_api_key
 
-    // 1. 모델 ID: 리스트에서 확인된 가장 확실한 최신 명칭으로 고정
-    // gemini-3-flash 가 안될 경우를 대비해 -001 또는 -latest 시도
-    const modelId = "gemini-3-flash"; 
+    // 1. [최종 모델 ID] v1 정식 버전에서 인식하는 최신 명칭
+    const modelId = "gemini-3-flash-latest"; 
 
-    // 2. URL: 400 에러가 났던 v1beta 경로로 다시 복귀합니다.
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?key=${apiKey}`;
+    // 2. [최종 URL] 정식 안정 버전인 v1 사용
+    const url = `https://generativelanguage.googleapis.com/v1/models/${modelId}:streamGenerateContent?key=${apiKey}`;
 
-    // 3. Payload: 400 에러(contents missing)를 방지하기 위해 데이터를 더 깊게 파서 추출합니다.
+    // 3. [메시지 구조 보정] 400 에러(contents missing) 방지를 위한 정밀 추출
     const googlePayload = {
       contents: messages.map(msg => {
         const role = msg.role === "assistant" ? "model" : "user";
         
-        // chatbot-ui의 다양한 버전에 대응하기 위해 모든 경로 탐색
+        // 텍스트 추출 (문자열, parts 배열, content.parts 배열 모두 대응)
         let text = "";
-        if (typeof msg.content === "string") text = msg.content;
-        else if (msg.parts?.[0]?.text) text = msg.parts[0].text;
-        else if (msg.content?.parts?.[0]?.text) text = msg.content.parts[0].text;
-        else if (msg.content?.text) text = msg.content.text;
+        if (typeof msg.content === "string") {
+          text = msg.content;
+        } else if (msg.parts?.[0]?.text) {
+          text = msg.parts[0].text;
+        } else if (msg.content?.parts?.[0]?.text) {
+          text = msg.content.parts[0].text;
+        }
 
         return {
           role: role,
@@ -112,6 +114,11 @@ export async function POST(request: Request) {
       }
     };
 
+    // 데이터가 비었을 경우 방어 로직
+    if (googlePayload.contents.length === 0) {
+      throw new Error("전송할 메시지 내용이 없습니다.");
+    }
+
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -120,11 +127,11 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       const errorJson = await response.json()
-      // 에러 메시지 상세 출력 로직
       const detail = errorJson.error?.message || JSON.stringify(errorJson)
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
 
+    // 스트리밍 응답 반환
     return new Response(response.body, {
       headers: { "Content-Type": "text/plain" }
     })
