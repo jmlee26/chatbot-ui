@@ -138,8 +138,51 @@ export async function POST(request: Request) {
       throw new Error(`Google API 호출 실패: ${detail}`)
     }
 
-    return new Response(response.body, {
-      headers: { "Content-Type": "text/plain" }
+    // [수정된 부분] 구글 스트림 응답을 chatbot-ui가 이해할 수 있는 텍스트 스트림으로 변환
+    const encoder = new TextEncoder()
+    const decoder = new TextDecoder()
+
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader()
+        if (!reader) return
+
+        let buffer = ""
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = decoder.decode(value, { stream: true })
+          buffer += chunk
+
+          // 구글 스트림은 JSON 조각들이 [{}, {}] 형태로 옵니다.
+          // 이를 정규식으로 파싱하여 text만 추출합니다.
+          const lines = buffer.split("\n")
+          buffer = lines.pop() || ""
+
+          for (const line of lines) {
+            const cleanedLine = line.trim().replace(/^,/, "").replace(/^\[/, "").replace(/\]$/, "")
+            if (!cleanedLine) continue
+
+            try {
+              const json = JSON.parse(cleanedLine)
+              const text = json.candidates?.[0]?.content?.parts?.[0]?.text || ""
+              if (text) {
+                controller.enqueue(encoder.encode(text))
+              }
+            } catch (e) {
+              // 불완전한 JSON 조각은 무시하고 다음 버퍼로 넘깁니다.
+              continue
+            }
+          }
+        }
+        controller.close()
+      }
+    })
+
+    return new Response(readableStream, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" }
     })
 
   } catch (error: any) {
