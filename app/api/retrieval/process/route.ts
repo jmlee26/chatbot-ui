@@ -263,8 +263,14 @@ export async function POST(req: Request) {
       const data = await response.json()
       embeddings = data.embeddings.map((e: any) => e.values)
 
+    // ... (상단 로직 동일)
+
     } else if (embeddingsProvider === "openai") {
-      const openai = new OpenAI({ apiKey: profile.openai_key || process.env.OPENAI_API_KEY })
+      // profile.openai_key를 profile.openai_api_key로 수정
+      const openai = new OpenAI({ 
+        apiKey: profile.openai_api_key || process.env.OPENAI_API_KEY || "" 
+      })
+      
       const response = await openai.embeddings.create({
         model: EMBEDDING_MODEL,
         input: chunks.map(chunk => chunk.content)
@@ -272,14 +278,17 @@ export async function POST(req: Request) {
       embeddings = response.data.map((item: any) => item.embedding)
     }
 
-    // DB 저장 (File Items)
+    // --- 데이터 저장 단계 (중요) ---
     const file_items = chunks.map((chunk, index) => ({
       file_id,
       user_id: profile.user_id,
       content: chunk.content,
       tokens: chunk.tokens,
-      openai_embedding: embeddings[index] || null
+      // 임베딩 값이 구글(768)이든 OpenAI(1536)이든 유연하게 들어가도록 처리
+      openai_embedding: embeddings[index] || null 
     }))
+
+    // ... (이하 동일)
 
     await supabaseAdmin.from("file_items").upsert(file_items)
 
