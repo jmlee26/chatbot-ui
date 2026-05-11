@@ -250,19 +250,18 @@ export async function POST(req: Request) {
       const modelPath = EMBEDDING_MODEL.startsWith("models/") ? EMBEDDING_MODEL : `models/${EMBEDDING_MODEL}`
       
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/${modelPath}:batchEmbedContents?key=${googleApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/google-embedding-004:batchEmbedContents?key=${googleApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             requests: chunks.map(chunk => ({
-              model: modelPath,
+              model: "models/google-embedding-004", // 모델 경로 명시
               content: { parts: [{ text: chunk.content }] }
             }))
           })
         }
       )
-
       const data = await response.json()
       if (!response.ok) throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
       if (!data.embeddings) throw new Error("Google API에서 임베딩 값을 반환하지 않았습니다.")
