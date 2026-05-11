@@ -202,9 +202,11 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file_id = formData.get("file_id") as string
     
-    // 환경변수에서 모델 ID를 가져옴 (기본값 설정)
     const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "google-embedding-004"
     const embeddingsProvider = formData.get("embeddingsProvider") as string
+
+    // 1. 구글 API 키 변수 수정 (사용자님의 실제 환경변수 명칭 반영)
+    const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
     const { data: fileMetadata, error: metadataError } = await supabaseAdmin
       .from("files")
@@ -224,7 +226,6 @@ export async function POST(req: Request) {
     const blob = new Blob([fileBuffer])
     const fileExtension = fileMetadata.name.split(".").pop()?.toLowerCase()
 
-    // 텍스트 추출 로직 (기존과 동일)
     let chunks: FileItemChunk[] = []
     switch (fileExtension) {
       case "csv": chunks = await processCSV(blob); break
@@ -237,10 +238,10 @@ export async function POST(req: Request) {
 
     let embeddings: any = []
 
-    // --- 임베딩 생성 로직 (404 에러 해결 구간) ---
+    // 2. 임베딩 생성 로직 분기 처리
     if (EMBEDDING_MODEL.includes("google")) {
-      // 구글 모델일 경우 전용 API 호출 (OpenAI SDK 우회)
-      const googleApiKey = process.env.GOOGLE_API_KEY
+      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY is not set in Vercel.");
+
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents?key=${googleApiKey}`,
         {
@@ -263,10 +264,7 @@ export async function POST(req: Request) {
       const data = await response.json()
       embeddings = data.embeddings.map((e: any) => e.values)
 
-    // ... (상단 로직 동일)
-
     } else if (embeddingsProvider === "openai") {
-      // profile.openai_key를 profile.openai_api_key로 수정
       const openai = new OpenAI({ 
         apiKey: profile.openai_api_key || process.env.OPENAI_API_KEY || "" 
       })
@@ -276,23 +274,30 @@ export async function POST(req: Request) {
         input: chunks.map(chunk => chunk.content)
       })
       embeddings = response.data.map((item: any) => item.embedding)
+
+    } else if (embeddingsProvider === "local") {
+      const embeddingPromises = chunks.map(async chunk => {
+        try {
+          return await generateLocalEmbedding(chunk.content)
+        } catch (error) {
+          return null
+        }
+      })
+      embeddings = await Promise.all(embeddingPromises)
     }
 
-    // --- 데이터 저장 단계 (중요) ---
+    // 3. 데이터 저장 (File Items)
     const file_items = chunks.map((chunk, index) => ({
       file_id,
       user_id: profile.user_id,
       content: chunk.content,
       tokens: chunk.tokens,
-      // 임베딩 값이 구글(768)이든 OpenAI(1536)이든 유연하게 들어가도록 처리
       openai_embedding: embeddings[index] || null 
     }))
 
-    // ... (이하 동일)
-
     await supabaseAdmin.from("file_items").upsert(file_items)
 
-    // 성공 시 status 업데이트 (result.status 에러 해결 핵심)
+    // 4. 성공 시 status 업데이트 (에러 해결 핵심)
     await supabaseAdmin
       .from("files")
       .update({ 
@@ -305,6 +310,9 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error(error)
-    return new Response(JSON.stringify({ message: error.message }), { status: 500 })
+    return new Response(JSON.stringify({ message: error.message }), { 
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    })
   }
 }
