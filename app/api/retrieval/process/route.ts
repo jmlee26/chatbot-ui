@@ -191,10 +191,6 @@ import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
 
-// ... 상단 import 생략 ...
-
-// (상단 import 생략 - 이전과 동일)
-
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = createClient<Database>(
@@ -206,6 +202,7 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file_id = formData.get("file_id") as string
     
+    // 환경변수 우선순위 설정
     const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "google-embedding-004"
     const embeddingsProvider = formData.get("embeddingsProvider") as string
@@ -241,27 +238,27 @@ export async function POST(req: Request) {
       default: throw new Error("지원하지 않는 파일 형식입니다.")
     }
 
-    let embeddings: any = []
+    let embeddings: any[] = []
 
-    // 4. 임베딩 생성 (Google / OpenAI 분기)
+    // 4. 임베딩 생성 (Google / OpenAI / Local 분기)
     if (EMBEDDING_MODEL.includes("google")) {
-      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 없습니다.")
+      if (!googleApiKey) throw new Error("Google API Key가 설정되지 않았습니다.")
 
-      const modelPath = EMBEDDING_MODEL.startsWith("models/") ? EMBEDDING_MODEL : `models/${EMBEDDING_MODEL}`
+      // 구글 API 경로 최적화 (v1beta/models/google-embedding-004:batchEmbedContents)
+      const modelName = "models/google-embedding-004"
+      const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:batchEmbedContents?key=${googleApiKey}`
       
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/google-embedding-004:batchEmbedContents?key=${googleApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requests: chunks.map(chunk => ({
-              model: "models/google-embedding-004", // 모델 경로 명시
-              content: { parts: [{ text: chunk.content }] }
-            }))
-          })
-        }
-      )
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: chunks.map(chunk => ({
+            model: modelName,
+            content: { parts: [{ text: chunk.content }] }
+          }))
+        })
+      })
+
       const data = await response.json()
       if (!response.ok) throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
       if (!data.embeddings) throw new Error("Google API에서 임베딩 값을 반환하지 않았습니다.")
@@ -277,24 +274,39 @@ export async function POST(req: Request) {
         input: chunks.map(chunk => chunk.content)
       })
       embeddings = response.data.map((item: any) => item.embedding)
+
+    } else if (embeddingsProvider === "local") {
+      const embeddingPromises = chunks.map(async chunk => {
+        try {
+          return await generateLocalEmbedding(chunk.content)
+        } catch (error) {
+          console.error("Local embedding error:", error)
+          return null
+        }
+      })
+      embeddings = await Promise.all(embeddingPromises)
     }
 
-    // 5. DB 저장
+    // 5. DB 저장 데이터 준비
     const file_items = chunks.map((chunk, index) => ({
       file_id,
       user_id: profile.user_id,
       content: chunk.content,
       tokens: chunk.tokens,
+      // 구글/OpenAI 임베딩 결과를 통합 저장
       openai_embedding: embeddings[index] || null 
     }))
 
-    await supabaseAdmin.from("file_items").upsert(file_items)
+    // file_items 테이블에 데이터 삽입
+    const { error: upsertError } = await supabaseAdmin.from("file_items").upsert(file_items)
+    if (upsertError) throw new Error(`DB 저장 실패: ${upsertError.message}`)
 
-    // 6. 성공 상태 업데이트 (가장 중요)
+    // 6. 성공 상태 업데이트
+    const totalTokens = file_items.reduce((acc, item) => acc + item.tokens, 0)
     await supabaseAdmin
       .from("files")
       .update({ 
-        tokens: file_items.reduce((acc, item) => acc + item.tokens, 0),
+        tokens: totalTokens,
         status: "complete" 
       })
       .eq("id", file_id)
@@ -305,8 +317,8 @@ export async function POST(req: Request) {
     })
 
   } catch (error: any) {
-    console.error(error)
-    return new Response(JSON.stringify({ message: error.message }), { 
+    console.error("Critical Error:", error)
+    return new Response(JSON.stringify({ message: error.message || "서버 내부 오류 발생" }), { 
       status: 500,
       headers: { "Content-Type": "application/json" }
     })
