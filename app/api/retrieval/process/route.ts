@@ -240,11 +240,11 @@ export async function POST(req: Request) {
 
     let embeddings: any[] = []
 
-    // 4. 임베딩 생성 (Google / OpenAI / Local 분기)
+    // 4. 임베딩 생성 (Google 에러 해결 버전)
     if (EMBEDDING_MODEL.includes("google")) {
-      if (!googleApiKey) throw new Error("Google API Key가 설정되지 않았습니다.")
+      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 설정되지 않았습니다.")
 
-      // 구글 API 경로 최적화 (v1beta/models/google-embedding-004:batchEmbedContents)
+      // 구글 API v1beta에서는 모델명을 URL 경로에 직접 포함해야 가장 안정적입니다.
       const modelName = "models/google-embedding-004"
       const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:batchEmbedContents?key=${googleApiKey}`
       
@@ -260,8 +260,13 @@ export async function POST(req: Request) {
       })
 
       const data = await response.json()
-      if (!response.ok) throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
-      if (!data.embeddings) throw new Error("Google API에서 임베딩 값을 반환하지 않았습니다.")
+
+      if (!response.ok) {
+        // 상세 에러 로깅을 통해 원인 파악 용이
+        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
+      }
+
+      if (!data.embeddings) throw new Error("Google API에서 임베딩 결과가 반환되지 않았습니다.")
       
       embeddings = data.embeddings.map((e: any) => e.values)
 
