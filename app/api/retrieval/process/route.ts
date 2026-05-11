@@ -193,6 +193,8 @@ import OpenAI from "openai"
 
 // ... 상단 import 생략 ...
 
+// (상단 import 생략 - 이전과 동일)
+
 export async function POST(req: Request) {
   try {
     const supabaseAdmin = createClient<Database>(
@@ -204,21 +206,47 @@ export async function POST(req: Request) {
     const formData = await req.formData()
     const file_id = formData.get("file_id") as string
     
-    // 환경변수 체크 (사용자님의 GOOGLE_GEMINI_API_KEY 반영)
-    const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "google-embedding-004"
     const embeddingsProvider = formData.get("embeddingsProvider") as string
 
-    // ... 파일 메타데이터 로드 및 텍스트 추출 로직 (기존과 동일) ...
+    // 1. 파일 메타데이터 가져오기
+    const { data: fileMetadata, error: metadataError } = await supabaseAdmin
+      .from("files")
+      .select("*")
+      .eq("id", file_id)
+      .single()
+
+    if (metadataError || !fileMetadata) throw new Error("파일 메타데이터를 찾을 수 없습니다.")
+
+    // 2. 스토리지에서 파일 다운로드
+    const { data: fileData, error: fileError } = await supabaseAdmin.storage
+      .from("files")
+      .download(fileMetadata.file_path)
+
+    if (fileError) throw new Error(`파일 다운로드 실패: ${fileError.message}`)
+
+    const fileBuffer = Buffer.from(await fileData.arrayBuffer())
+    const blob = new Blob([fileBuffer])
+    const fileExtension = fileMetadata.name.split(".").pop()?.toLowerCase()
+
+    // 3. 텍스트 추출 (Chunks 생성)
+    let chunks: FileItemChunk[] = []
+    switch (fileExtension) {
+      case "csv": chunks = await processCSV(blob); break
+      case "json": chunks = await processJSON(blob); break
+      case "md": chunks = await processMarkdown(blob); break
+      case "pdf": chunks = await processPdf(blob); break
+      case "txt": chunks = await processTxt(blob); break
+      default: throw new Error("지원하지 않는 파일 형식입니다.")
+    }
 
     let embeddings: any = []
 
-    // --- 임베딩 생성 로직 (404/400 모델 미지원 에러 해결 구간) ---
+    // 4. 임베딩 생성 (Google / OpenAI 분기)
     if (EMBEDDING_MODEL.includes("google")) {
-      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY is missing.")
+      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 없습니다.")
 
-      // 최신 API 버전 및 모델 경로 설정
-      // 모델 이름에 이미 'models/'가 포함되어 있을 경우를 대비해 처리
       const modelPath = EMBEDDING_MODEL.startsWith("models/") ? EMBEDDING_MODEL : `models/${EMBEDDING_MODEL}`
       
       const response = await fetch(
@@ -236,32 +264,34 @@ export async function POST(req: Request) {
       )
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
-      }
-
-      // 구글 응답에서 임베딩 값 추출
-      if (!data.embeddings) throw new Error("No embeddings returned from Google API.")
+      if (!response.ok) throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
+      if (!data.embeddings) throw new Error("Google API에서 임베딩 값을 반환하지 않았습니다.")
+      
       embeddings = data.embeddings.map((e: any) => e.values)
 
     } else if (embeddingsProvider === "openai") {
-      // ... OpenAI 로직 ...
+      const openai = new OpenAI({ 
+        apiKey: profile.openai_api_key || process.env.OPENAI_API_KEY || "" 
+      })
+      const response = await openai.embeddings.create({
+        model: EMBEDDING_MODEL,
+        input: chunks.map(chunk => chunk.content)
+      })
+      embeddings = response.data.map((item: any) => item.embedding)
     }
 
-    // --- 데이터 저장 (File Items) ---
+    // 5. DB 저장
     const file_items = chunks.map((chunk, index) => ({
       file_id,
       user_id: profile.user_id,
       content: chunk.content,
       tokens: chunk.tokens,
-      // 구글 임베딩 결과를 저장 (openai_embedding 컬럼을 공용으로 사용)
       openai_embedding: embeddings[index] || null 
     }))
 
     await supabaseAdmin.from("file_items").upsert(file_items)
 
-    // --- 성공 시 status 업데이트 (result.status 에러 해결 핵심) ---
+    // 6. 성공 상태 업데이트 (가장 중요)
     await supabaseAdmin
       .from("files")
       .update({ 
@@ -270,11 +300,13 @@ export async function POST(req: Request) {
       })
       .eq("id", file_id)
 
-    return new NextResponse(JSON.stringify({ message: "Success" }), { status: 200 })
+    return new NextResponse(JSON.stringify({ message: "Success" }), { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    })
 
   } catch (error: any) {
     console.error(error)
-    // 에러 발생 시에도 JSON 형태로 응답하여 클라이언트의 .status 참조 에러 방지
     return new Response(JSON.stringify({ message: error.message }), { 
       status: 500,
       headers: { "Content-Type": "application/json" }
