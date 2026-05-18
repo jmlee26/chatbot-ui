@@ -1,17 +1,29 @@
-import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
-import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
-import { Database } from "@/supabase/types"
-import { createClient } from "@supabase/supabase-js"
-import OpenAI from "openai"
-
-export async function POST(request: Request) {
-  const json = await request.json()
-  const { userInput, fileIds, embeddingsProvider, sourceCount } = json as {
+/*
+const { userInput, fileIds, embeddingsProvider, sourceCount } = json as {
     userInput: string
     fileIds: string[]
     embeddingsProvider: "openai" | "local"
     sourceCount: number
   }
+
+
+import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
+import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
+import { Database } from "@/supabase/types"
+import { createClient } from "@supabase/supabase-js"
+//import OpenAI from "openai"
+
+export async function POST(request: Request) {
+  const json = await request.json()
+
+  const { userInput, fileIds, sourceCount } = json as {
+    userInput: string
+    fileIds: string[]
+    sourceCount: number
+  }
+  
+  const embeddingsProvider = "local"
+  
 
   const uniqueFileIds = [...new Set(fileIds)]
 
@@ -98,5 +110,82 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ message: errorMessage }), {
       status: errorCode
     })
+  }
+}
+
+*/
+
+
+import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
+import { Database } from "@/supabase/types"
+import { createClient } from "@supabase/supabase-js"
+
+export async function POST(request: Request) {
+  try {
+    const json = await request.json()
+
+    const { userInput, fileIds, sourceCount } = json as {
+      userInput: string
+      fileIds: string[]
+      sourceCount: number
+    }
+
+    const uniqueFileIds = [...new Set(fileIds)]
+
+    const supabaseAdmin = createClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    console.log("RETRIEVAL START")
+
+    // 질문을 local embedding으로 변환
+    const localEmbedding = await generateLocalEmbedding(userInput)
+
+    console.log("QUERY EMBEDDING LENGTH:", localEmbedding.length)
+
+    // local_embedding 기반 similarity search
+    const { data: localFileItems, error: localFileItemsError } =
+      await supabaseAdmin.rpc("match_file_items_local", {
+        query_embedding: localEmbedding as any,
+        match_count: sourceCount,
+        file_ids: uniqueFileIds
+      })
+
+    if (localFileItemsError) {
+      console.error("SUPABASE RPC ERROR:", localFileItemsError)
+      throw localFileItemsError
+    }
+
+    console.log("MATCHED CHUNKS:", localFileItems?.length || 0)
+
+    const mostSimilarChunks = localFileItems?.sort(
+      (a, b) => b.similarity - a.similarity
+    )
+
+    return new Response(
+      JSON.stringify({ results: mostSimilarChunks }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    )
+
+  } catch (error: any) {
+    console.error("RETRIEVAL ERROR:", error)
+
+    return new Response(
+      JSON.stringify({
+        message: error.message || "An unexpected error occurred"
+      }),
+      {
+        status: error.status || 500,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    )
   }
 }
