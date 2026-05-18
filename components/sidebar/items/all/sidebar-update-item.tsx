@@ -48,7 +48,7 @@ import {
   deleteFileWorkspace,
   getFileWorkspacesByFileId,
   updateFile
-} from "@/db/files"
+} from "@/lib/db/files"
 import {
   createModelWorkspaces,
   deleteModelWorkspace,
