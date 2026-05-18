@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     
     // 환경변수 우선순위 설정
     const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-    const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "google-embedding-004"
+    const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "text-embedding-004"
     const embeddingsProvider = formData.get("embeddingsProvider") as string
 
     // 1. 파일 메타데이터 가져오기
