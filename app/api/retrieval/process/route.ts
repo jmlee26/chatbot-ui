@@ -205,7 +205,8 @@ export async function POST(req: Request) {
     // 환경변수 우선순위 설정
     const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
     const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "embedding-001"
-    const embeddingsProvider = formData.get("embeddingsProvider") as string
+    //const embeddingsProvider = formData.get("embeddingsProvider") as string
+    const embeddingsProvider = "local"
 
     // 1. 파일 메타데이터 가져오기
     const { data: fileMetadata, error: metadataError } = await supabaseAdmin
@@ -284,15 +285,26 @@ export async function POST(req: Request) {
       embeddings = response.data.map((item: any) => item.embedding)
 
     } else if (embeddingsProvider === "local") {
+
+      console.log("LOCAL EMBEDDING START")
+    
       const embeddingPromises = chunks.map(async chunk => {
         try {
-          return await generateLocalEmbedding(chunk.content)
+          const result = await generateLocalEmbedding(chunk.content)
+    
+          console.log("EMBEDDING LENGTH:", result.length)
+    
+          return result
+    
         } catch (error) {
           console.error("Local embedding error:", error)
           return null
         }
       })
+    
       embeddings = await Promise.all(embeddingPromises)
+    
+      console.log("LOCAL EMBEDDING SUCCESS")
     }
 
     // 5. DB 저장 데이터 준비
