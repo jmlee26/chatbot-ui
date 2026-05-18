@@ -310,7 +310,7 @@ export async function POST(req: Request) {
     embeddings = await Promise.all(embeddingPromises)
     
     console.log("LOCAL EMBEDDING SUCCESS")
-    }
+
 
     // 5. DB 저장 데이터 준비
     const file_items = chunks.map((chunk, index) => ({
