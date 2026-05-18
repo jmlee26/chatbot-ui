@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     
     // 환경변수 우선순위 설정
     const googleApiKey = process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-    const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "text-embedding-004"
+    const EMBEDDING_MODEL = process.env.NEXT_PUBLIC_EMBEDDING_MODEL_ID || "embedding-001"
     const embeddingsProvider = formData.get("embeddingsProvider") as string
 
     // 1. 파일 메타데이터 가져오기
@@ -241,11 +241,14 @@ export async function POST(req: Request) {
     let embeddings: any[] = []
 
     // 4. 임베딩 생성 (Google 에러 해결 버전)
-    if (EMBEDDING_MODEL.includes("google")) {
+    if (
+      embeddingsProvider === "google" ||
+      embeddingsProvider === "gemini"
+    ) {
       if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 설정되지 않았습니다.")
 
       // 구글 API v1beta에서는 모델명을 URL 경로에 직접 포함해야 가장 안정적입니다.
-      const modelName = "models/google-embedding-004"
+      const modelName = "models/google-embedding-001"
       const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:batchEmbedContents?key=${googleApiKey}`
       
       const response = await fetch(url, {
