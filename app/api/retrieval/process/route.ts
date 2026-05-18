@@ -242,10 +242,11 @@ export async function POST(req: Request) {
     let embeddings: any[] = []
 
     // 4. 임베딩 생성 (Google 에러 해결 버전)
-    if (
-      embeddingsProvider === "google" ||
-      embeddingsProvider === "gemini"
-    ) {
+    //if (
+      //embeddingsProvider === "google" ||
+      //embeddingsProvider === "gemini"
+    //) {
+    if (false) {
       if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 설정되지 않았습니다.")
 
       // 구글 API v1beta에서는 모델명을 URL 경로에 직접 포함해야 가장 안정적입니다.
