@@ -241,6 +241,7 @@ export async function POST(req: Request) {
 
     let embeddings: any[] = []
 
+    /*
     // 4. 임베딩 생성 (Google 에러 해결 버전)
     //if (
       //embeddingsProvider === "google" ||
@@ -284,7 +285,7 @@ export async function POST(req: Request) {
         input: chunks.map(chunk => chunk.content)
       })
       embeddings = response.data.map((item: any) => item.embedding)
-
+*/
     } else if (embeddingsProvider === "local") {
 
       console.log("LOCAL EMBEDDING START")
