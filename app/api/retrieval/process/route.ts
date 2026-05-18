@@ -176,6 +176,56 @@ export async function POST(req: Request) {
 }
 */
 
+/*
+    // 4. 임베딩 생성 (Google 에러 해결 버전)
+    //if (
+      //embeddingsProvider === "google" ||
+      //embeddingsProvider === "gemini"
+    //) {
+    if (false) {
+      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 설정되지 않았습니다.")
+
+      // 구글 API v1beta에서는 모델명을 URL 경로에 직접 포함해야 가장 안정적입니다.
+      const modelName = "models/google-embedding-001"
+      const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:batchEmbedContents?key=${googleApiKey}`
+      
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: chunks.map(chunk => ({
+            model: modelName,
+            content: { parts: [{ text: chunk.content }] }
+          }))
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // 상세 에러 로깅을 통해 원인 파악 용이
+        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
+      }
+
+      if (!data.embeddings) throw new Error("Google API에서 임베딩 결과가 반환되지 않았습니다.")
+      
+      embeddings = data.embeddings.map((e: any) => e.values)
+
+    } else if (embeddingsProvider === "openai") {
+      const openai = new OpenAI({ 
+        apiKey: profile.openai_api_key || process.env.OPENAI_API_KEY || "" 
+      })
+      const response = await openai.embeddings.create({
+        model: EMBEDDING_MODEL,
+        input: chunks.map(chunk => chunk.content)
+      })
+      embeddings = response.data.map((item: any) => item.embedding)
+
+    } else if (embeddingsProvider === "local") {
+*/
+      
+
+
 import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
 import {
   processCSV,
@@ -241,54 +291,7 @@ export async function POST(req: Request) {
 
     let embeddings: any[] = []
 
-    /*
-    // 4. 임베딩 생성 (Google 에러 해결 버전)
-    //if (
-      //embeddingsProvider === "google" ||
-      //embeddingsProvider === "gemini"
-    //) {
-    if (false) {
-      if (!googleApiKey) throw new Error("GOOGLE_GEMINI_API_KEY가 설정되지 않았습니다.")
-
-      // 구글 API v1beta에서는 모델명을 URL 경로에 직접 포함해야 가장 안정적입니다.
-      const modelName = "models/google-embedding-001"
-      const url = `https://generativelanguage.googleapis.com/v1beta/${modelName}:batchEmbedContents?key=${googleApiKey}`
-      
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: chunks.map(chunk => ({
-            model: modelName,
-            content: { parts: [{ text: chunk.content }] }
-          }))
-        })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        // 상세 에러 로깅을 통해 원인 파악 용이
-        throw new Error(`Google API Error: ${data.error?.message || response.statusText}`)
-      }
-
-      if (!data.embeddings) throw new Error("Google API에서 임베딩 결과가 반환되지 않았습니다.")
-      
-      embeddings = data.embeddings.map((e: any) => e.values)
-
-    } else if (embeddingsProvider === "openai") {
-      const openai = new OpenAI({ 
-        apiKey: profile.openai_api_key || process.env.OPENAI_API_KEY || "" 
-      })
-      const response = await openai.embeddings.create({
-        model: EMBEDDING_MODEL,
-        input: chunks.map(chunk => chunk.content)
-      })
-      embeddings = response.data.map((item: any) => item.embedding)
-
-    } else if (embeddingsProvider === "local") {
-    */
-      console.log("LOCAL EMBEDDING START")
+    console.log("LOCAL EMBEDDING START")
     
       const embeddingPromises = chunks.map(async chunk => {
         try {
