@@ -293,23 +293,23 @@ export async function POST(req: Request) {
 
     console.log("LOCAL EMBEDDING START")
     
-      const embeddingPromises = chunks.map(async chunk => {
-        try {
-          const result = await generateLocalEmbedding(chunk.content)
+    const embeddingPromises = chunks.map(async chunk => {
+       try {
+        const result = await generateLocalEmbedding(chunk.content)
     
-          console.log("EMBEDDING LENGTH:", result.length)
+        console.log("EMBEDDING LENGTH:", result.length)
     
-          return result
+        return result
     
-        } catch (error) {
-          console.error("Local embedding error:", error)
-          return null
-        }
-      })
+      } catch (error) {
+        console.error("Local embedding error:", error)
+        return null
+      }
+    })
     
-      embeddings = await Promise.all(embeddingPromises)
+    embeddings = await Promise.all(embeddingPromises)
     
-      console.log("LOCAL EMBEDDING SUCCESS")
+    console.log("LOCAL EMBEDDING SUCCESS")
     }
 
     // 5. DB 저장 데이터 준비
