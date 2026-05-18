@@ -314,7 +314,8 @@ export async function POST(req: Request) {
       content: chunk.content,
       tokens: chunk.tokens,
       // 구글/OpenAI 임베딩 결과를 통합 저장
-      openai_embedding: embeddings[index] || null 
+      //openai_embedding: embeddings[index] || null 
+      local_embedding: embeddings[index] || null
     }))
 
     // file_items 테이블에 데이터 삽입
