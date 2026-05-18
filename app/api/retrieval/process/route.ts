@@ -285,9 +285,9 @@ export async function POST(req: Request) {
         input: chunks.map(chunk => chunk.content)
       })
       embeddings = response.data.map((item: any) => item.embedding)
-*/
-    } else if (embeddingsProvider === "local") {
 
+    } else if (embeddingsProvider === "local") {
+    */
       console.log("LOCAL EMBEDDING START")
     
       const embeddingPromises = chunks.map(async chunk => {
