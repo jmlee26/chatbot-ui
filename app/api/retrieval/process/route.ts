@@ -232,7 +232,8 @@ import {
   processJSON,
   processMarkdown,
   processPdf,
-  processTxt
+  processTxt,
+  processDocX
 } from "@/lib/retrieval/processing"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
@@ -286,6 +287,7 @@ export async function POST(req: Request) {
       case "md": chunks = await processMarkdown(blob); break
       case "pdf": chunks = await processPdf(blob); break
       case "txt": chunks = await processTxt(blob); break
+      case "docx": chunks = await processDocX(blob); break
       default: throw new Error("지원하지 않는 파일 형식입니다.")
     }
 
