@@ -98,6 +98,7 @@ export async function POST(req: Request) {
     */
     const file_items = chunks.map((chunk, index) => ({
       file_id: fileId,
+      user_id: profile.user_id,
       content: chunk.content,
       tokens: chunk.tokens,
       local_embedding: (embeddings[index] || null) as any
