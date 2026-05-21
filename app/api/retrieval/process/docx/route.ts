@@ -44,7 +44,7 @@ export async function POST(req: Request) {
         })
     }
 
-    let embeddings: any = []
+    //let embeddings: any = []
 
     //let openai
     //if (profile.use_azure_openai) {
