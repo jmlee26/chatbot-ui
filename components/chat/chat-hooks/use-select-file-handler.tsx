@@ -70,10 +70,10 @@ export const useSelectFileHandler = () => {
         } else if (
           file.type.includes(
             "vnd.openxmlformats-officedocument.wordprocessingml.document"
-          )
+          ) ||
+          file.name.toLowerCase().endsWith(".docx")
         ) {
           simplifiedFileType = "docx"
-        
         } else if (
           file.type.includes(
             "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -101,7 +101,8 @@ export const useSelectFileHandler = () => {
         if (
           file.type.includes(
             "vnd.openxmlformats-officedocument.wordprocessingml.document"
-          )
+          ) ||
+          file.name.toLowerCase().endsWith(".docx")
         ) {
           const arrayBuffer = await file.arrayBuffer()
           const result = await mammoth.extractRawText({
