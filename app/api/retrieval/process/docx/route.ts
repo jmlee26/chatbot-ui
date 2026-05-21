@@ -1,6 +1,7 @@
 import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
 import { processDocX } from "@/lib/retrieval/processing"
 //import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
+import { getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
 import { FileItemChunk } from "@/types"
 import { createClient } from "@supabase/supabase-js"
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    //const profile = await getServerProfile()
+    const profile = await getServerProfile()
 
     //if (embeddingsProvider === "openai") {
       //if (profile.use_azure_openai) {
