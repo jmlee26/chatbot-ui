@@ -233,7 +233,8 @@ import {
   processMarkdown,
   processPdf,
   processTxt,
-  processDocX
+  processDocX,
+  processXLSX
 } from "@/lib/retrieval/processing"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
@@ -282,23 +283,45 @@ export async function POST(req: Request) {
 
     // 3. 텍스트 추출 (Chunks 생성)
     let chunks: FileItemChunk[] = []
+    
     switch (fileExtension) {
-      case "csv": chunks = await processCSV(blob); break
-      case "json": chunks = await processJSON(blob); break
-      case "md": chunks = await processMarkdown(blob); break
-      case "pdf": chunks = await processPdf(blob); break
-      case "txt": chunks = await processTxt(blob); break
+      case "csv":
+        chunks = await processCSV(blob)
+        break
+    
+      case "json":
+        chunks = await processJSON(blob)
+        break
+    
+      case "md":
+        chunks = await processMarkdown(blob)
+        break
+    
+      case "pdf":
+        chunks = await processPdf(blob)
+        break
+    
+      case "txt":
+        chunks = await processTxt(blob)
+        break
+    
       case "docx":
         const arrayBuffer = await blob.arrayBuffer()
-      
+    
         const result = await mammoth.extractRawText({
           arrayBuffer
         })
-      
+    
         chunks = await processDocX(result.value)
-      
+    
         break
-      default: throw new Error("지원하지 않는 파일 형식입니다.")
+    
+      case "xlsx":
+        chunks = await processXLSX(blob)
+        break
+    
+      default:
+        throw new Error("지원하지 않는 파일 형식입니다.")
     }
 
     let embeddings: any[] = []
