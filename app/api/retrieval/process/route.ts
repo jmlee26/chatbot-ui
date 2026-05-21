@@ -320,6 +320,11 @@ export async function POST(req: Request) {
       case "xlsx":
         chunks = await processXLSX(blob)
         break
+
+      case "pptx":
+        chunks = await processPPTX(blob)
+        break
+
     
       default:
         throw new Error("지원하지 않는 파일 형식입니다.")
