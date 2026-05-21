@@ -241,6 +241,7 @@ import { FileItemChunk } from "@/types"
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 import OpenAI from "openai"
+import mammoth from "mammoth"
 
 export async function POST(req: Request) {
   try {
@@ -287,7 +288,16 @@ export async function POST(req: Request) {
       case "md": chunks = await processMarkdown(blob); break
       case "pdf": chunks = await processPdf(blob); break
       case "txt": chunks = await processTxt(blob); break
-      case "docx": chunks = await processDocX(blob); break
+      case "docx":
+        const arrayBuffer = await blob.arrayBuffer()
+      
+        const result = await mammoth.extractRawText({
+          arrayBuffer
+        })
+      
+        chunks = await processDocX(result.value)
+      
+        break
       default: throw new Error("지원하지 않는 파일 형식입니다.")
     }
 
