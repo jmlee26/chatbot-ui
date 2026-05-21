@@ -1,4 +1,5 @@
 import JSZip from "jszip"
+import { xml2js } from "xml-js"
 
 export async function processPPTX(blob: Blob) {
   const arrayBuffer = await blob.arrayBuffer()
