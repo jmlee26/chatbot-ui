@@ -1,11 +1,11 @@
 import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
 import { processDocX } from "@/lib/retrieval/processing"
-import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
+//import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
 import { FileItemChunk } from "@/types"
 import { createClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
-import OpenAI from "openai"
+//import OpenAI from "openai"
 
 export async function POST(req: Request) {
   const json = await req.json()
@@ -22,15 +22,15 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const profile = await getServerProfile()
+    //const profile = await getServerProfile()
 
-    if (embeddingsProvider === "openai") {
-      if (profile.use_azure_openai) {
-        checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
-      } else {
-        checkApiKey(profile.openai_api_key, "OpenAI")
-      }
-    }
+    //if (embeddingsProvider === "openai") {
+      //if (profile.use_azure_openai) {
+        //checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
+      //} else {
+        //checkApiKey(profile.openai_api_key, "OpenAI")
+      //}
+    //}
 
     let chunks: FileItemChunk[] = []
 
@@ -46,21 +46,33 @@ export async function POST(req: Request) {
 
     let embeddings: any = []
 
-    let openai
-    if (profile.use_azure_openai) {
-      openai = new OpenAI({
-        apiKey: profile.azure_openai_api_key || "",
-        baseURL: `${profile.azure_openai_endpoint}/openai/deployments/${profile.azure_openai_embeddings_id}`,
-        defaultQuery: { "api-version": "2023-12-01-preview" },
-        defaultHeaders: { "api-key": profile.azure_openai_api_key }
-      })
-    } else {
-      openai = new OpenAI({
-        apiKey: profile.openai_api_key || "",
-        organization: profile.openai_organization_id
-      })
-    }
+    //let openai
+    //if (profile.use_azure_openai) {
+      //openai = new OpenAI({
+        //apiKey: profile.azure_openai_api_key || "",
+        //baseURL: `${profile.azure_openai_endpoint}/openai/deployments/${profile.azure_openai_embeddings_id}`,
+        //defaultQuery: { "api-version": "2023-12-01-preview" },
+        //defaultHeaders: { "api-key": profile.azure_openai_api_key }
+      //})
+    //} else {
+      //openai = new OpenAI({
+        //apiKey: profile.openai_api_key || "",
+        //organization: profile.openai_organization_id
+      //})
+    //}
 
+
+    const embeddingPromises = chunks.map(async chunk => {
+      try {
+        return await generateLocalEmbedding(chunk.content)
+      } catch (error) {
+        console.error(`Error generating embedding for chunk: ${chunk}`, error)
+        return null
+      }
+    })
+    
+    const embeddings = await Promise.all(embeddingPromises)
+    /*
     if (embeddingsProvider === "openai") {
       const response = await openai.embeddings.create({
         model: "text-embedding-3-small",
@@ -82,7 +94,14 @@ export async function POST(req: Request) {
 
       embeddings = await Promise.all(embeddingPromises)
     }
-
+    */
+    const file_items = chunks.map((chunk, index) => ({
+      file_id: fileId,
+      content: chunk.content,
+      tokens: chunk.tokens,
+      local_embedding: (embeddings[index] || null) as any
+    }))
+    /*
     const file_items = chunks.map((chunk, index) => ({
       file_id: fileId,
       user_id: profile.user_id,
@@ -97,6 +116,7 @@ export async function POST(req: Request) {
           ? ((embeddings[index] || null) as any)
           : null
     }))
+    */
 
     await supabaseAdmin.from("file_items").upsert(file_items)
 
