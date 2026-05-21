@@ -1,5 +1,4 @@
 import JSZip from "jszip"
-import { xml2js } from "xml-js"
 
 export async function processPPTX(blob: Blob) {
   const arrayBuffer = await blob.arrayBuffer()
@@ -15,33 +14,17 @@ export async function processPPTX(blob: Blob) {
   for (const slidePath of slideFiles) {
     const slideXml = await zip.files[slidePath].async("text")
 
-    const parsed = xml2js(slideXml, {
-      compact: true
-    }) as any
+    const matches = slideXml.match(/<a:t>(.*?)<\/a:t>/g)
 
-    const texts: string[] = []
+    if (matches) {
+      const texts = matches.map(text =>
+        text
+          .replace("<a:t>", "")
+          .replace("</a:t>", "")
+      )
 
-    const extractText = (obj: any) => {
-      if (!obj || typeof obj !== "object") return
-
-      for (const key in obj) {
-        if (key === "a:t") {
-          if (Array.isArray(obj[key])) {
-            obj[key].forEach((t: any) => {
-              if (t._text) texts.push(t._text)
-            })
-          } else if (obj[key]._text) {
-            texts.push(obj[key]._text)
-          }
-        }
-
-        extractText(obj[key])
-      }
+      fullText += texts.join(" ") + "\n"
     }
-
-    extractText(parsed)
-
-    fullText += texts.join(" ") + "\n"
   }
 
   return [
