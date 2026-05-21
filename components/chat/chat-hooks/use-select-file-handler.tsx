@@ -8,6 +8,11 @@ import { toast } from "sonner"
 export const ACCEPTED_FILE_TYPES = [
   "text/csv",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+  "application/vnd.ms-excel",
+  
   "application/json",
   "text/markdown",
   "application/pdf",
@@ -61,13 +66,25 @@ export const useSelectFileHandler = () => {
       } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
         if (simplifiedFileType.includes("vnd.adobe.pdf")) {
           simplifiedFileType = "pdf"
+        
         } else if (
-          simplifiedFileType.includes(
-            "vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-              "docx"
+          file.type.includes(
+            "vnd.openxmlformats-officedocument.wordprocessingml.document"
           )
         ) {
           simplifiedFileType = "docx"
+        
+        } else if (
+          file.type.includes(
+            "vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          )
+        ) {
+          simplifiedFileType = "xlsx"
+        
+        } else if (
+          file.type.includes("vnd.ms-excel")
+        ) {
+          simplifiedFileType = "xls"
         }
 
         setNewMessageFiles(prev => [
@@ -83,8 +100,7 @@ export const useSelectFileHandler = () => {
         // Handle docx files
         if (
           file.type.includes(
-            "vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-              "docx"
+            "vnd.openxmlformats-officedocument.wordprocessingml.document"
           )
         ) {
           const arrayBuffer = await file.arrayBuffer()
