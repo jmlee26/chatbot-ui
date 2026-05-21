@@ -63,7 +63,12 @@ export const useSelectFileHandler = () => {
 
       if (file.type.includes("image")) {
         reader.readAsDataURL(file)
-      } else if (ACCEPTED_FILE_TYPES.split(",").includes(file.type)) {
+      } else if (
+        ACCEPTED_FILE_TYPES.split(",").includes(file.type) ||
+        file.name.toLowerCase().endsWith(".docx") ||
+        file.name.toLowerCase().endsWith(".xlsx") ||
+        file.name.toLowerCase().endsWith(".xls")
+      ) {
         if (simplifiedFileType.includes("vnd.adobe.pdf")) {
           simplifiedFileType = "pdf"
         
@@ -144,10 +149,20 @@ export const useSelectFileHandler = () => {
 
           return
         } else {
-          // Use readAsArrayBuffer for PDFs and readAsText for other types
-          file.type.includes("pdf")
-            ? reader.readAsArrayBuffer(file)
-            : reader.readAsText(file)
+          // Binary files
+          if (
+            file.type.includes("pdf") ||
+            file.name.toLowerCase().endsWith(".pdf") ||
+        
+            file.name.toLowerCase().endsWith(".docx") ||
+        
+            file.name.toLowerCase().endsWith(".xlsx") ||
+            file.name.toLowerCase().endsWith(".xls")
+          ) {
+            reader.readAsArrayBuffer(file)
+          } else {
+            reader.readAsText(file)
+          }
         }
       } else {
         throw new Error("Unsupported file type")
