@@ -234,7 +234,8 @@ import {
   processPdf,
   processTxt,
   processDocX,
-  processXLSX
+  processXLSX,
+  processPPTX
 } from "@/lib/retrieval/processing"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
