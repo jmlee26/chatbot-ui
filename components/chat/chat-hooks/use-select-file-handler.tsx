@@ -90,7 +90,14 @@ export const useSelectFileHandler = () => {
           file.type.includes("vnd.ms-excel")
         ) {
           simplifiedFileType = "xls"
-        }
+        } else if (
+            file.type.includes(
+              "vnd.openxmlformats-officedocument.presentationml.presentation"
+            ) ||
+            file.name.toLowerCase().endsWith(".pptx")
+          ) {
+            simplifiedFileType = "pptx"
+          }
 
         setNewMessageFiles(prev => [
           ...prev,
@@ -157,7 +164,9 @@ export const useSelectFileHandler = () => {
             file.name.toLowerCase().endsWith(".docx") ||
         
             file.name.toLowerCase().endsWith(".xlsx") ||
-            file.name.toLowerCase().endsWith(".xls")
+            file.name.toLowerCase().endsWith(".xls") ||
+
+            file.name.toLowerCase().endsWith(".pptx")
           ) {
             reader.readAsArrayBuffer(file)
           } else {
